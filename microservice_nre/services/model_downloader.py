@@ -5,9 +5,10 @@ que o event loop continue processando outras requisições durante o download.
 """
 
 import asyncio
+import logging
 import sys
 
-from microservice_nre.utils.logger import logger
+logger = logging.getLogger(__name__)
 
 
 async def download_model(model_name: str) -> str:

@@ -30,9 +30,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
+    PROJECT_NAME: str
+
     LOG_LEVEL: str
     CONSOLE_LOG: bool | None = None
     LOG_FILE: str | None = None
+
     DATABASE_URL: str
 
     # spaCy

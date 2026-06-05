@@ -12,28 +12,60 @@ Handlers disponíveis (ativados via settings):
 
 import logging
 import sys
-import uuid
+import time
 
+from microservice_nre.utils.context import REQUEST_ID
 from microservice_nre.utils.settings import settings
 
-execution_id = str(uuid.uuid4())
 
-logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOG_LEVEL)
+def default_formatter() -> logging.Formatter:
+    formatter = logging.Formatter(
+        '[%(asctime)s] [%(levelname)-8s] [%(short_name)s] request_id[%(request_id)s]: %(message)s ',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+    formatter.converter = time.gmtime
+    return formatter
 
-formatter = logging.Formatter(
-    f'[%(asctime)s] %(levelname)-8s %(message)s exec_id:[{execution_id}]',
-    datefmt='%H:%M:%S',
-)
 
-if settings.CONSOLE_LOG:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(settings.LOG_LEVEL)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+class AppFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name.startswith(settings.PROJECT_NAME):
+            name_parts = record.name.split('.')
+            record.short_name = '.'.join(name_parts[-2:])
+            record.request_id = REQUEST_ID.get()
+            return True
 
-if settings.LOG_FILE:
-    file_handler = logging.FileHandler(settings.LOG_FILE, encoding='utf-8')
-    file_handler.setLevel(settings.LOG_LEVEL)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+        if record.levelno >= logging.WARNING:
+            record.short_name = record.name
+            record.request_id = 'external'
+            return True
+
+        return False
+
+
+class CustomStreamHandler(logging.StreamHandler):
+    def __init__(self) -> None:
+        super().__init__(sys.stdout)
+
+
+class CustomFileHandler(logging.FileHandler):
+    def __init__(self, filename: str = settings.LOG_FILE) -> None:
+        super().__init__(filename, mode='a', encoding='utf-8')
+
+
+class CustomLogger(logging.Logger):
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+
+        self.setLevel(settings.LOG_LEVEL)
+        self.propagate = False
+
+        self.addHandler(CustomFileHandler())
+        self.addHandler(CustomStreamHandler())
+        self.addFilter(AppFilter())
+
+        self.set_custom_formatter(default_formatter())
+
+    def set_custom_formatter(self, formatter: logging.Formatter) -> None:
+        for h in self.handlers:
+            h.setFormatter(formatter)
