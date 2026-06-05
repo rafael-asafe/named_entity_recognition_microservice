@@ -20,7 +20,6 @@ services:
       LOG_FILE: "/data/logs/app.log"
     volumes:
       - ./data:/data
-      - ./data/logs:/data/logs
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -5,6 +5,7 @@ mantendo ``main.py`` responsável apenas pela composição da aplicação.
 """
 
 import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -17,10 +18,9 @@ from microservice_nre.database.database import engine
 from microservice_nre.database.models import MLModel
 from microservice_nre.services.model_downloader import download_model
 from microservice_nre.services.spacy_service import SpacyService
-from microservice_nre.utils.logger import logger
-from microservice_nre.utils.settings import Settings
+from microservice_nre.utils.settings import settings
 
-_s = Settings()
+logger = logging.getLogger(__name__)
 
 
 async def preload_model(model_name: str) -> None:
@@ -35,7 +35,7 @@ async def preload_model(model_name: str) -> None:
                 await session.commit()
                 await session.refresh(model_obj)
             await download_model(model_name)
-            logger.debug(f'Preload do modelo {model_name} foi bem sucedido')
+            logger.info(f'Preload do modelo {model_name} foi bem sucedido')
     except Exception as e:
         logger.warning(f'Preload falhou para {model_name}: {e}')
 
@@ -63,10 +63,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     Yields:
         Controle para o servidor após o startup concluído.
     """
+
     service = SpacyService()
     app.state.service = service
 
-    modelos = set(_s.MODEL_PRELOAD)
+    modelos = set(settings.MODEL_PRELOAD)
     await asyncio.gather(*[preload_model(modelo) for modelo in modelos])
 
     async with AsyncSession(engine, expire_on_commit=False) as session:
