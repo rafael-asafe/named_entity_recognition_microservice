@@ -23,6 +23,8 @@ ENV PYTHONFAULTHANDLER=1 \
 
 WORKDIR /app
 
+RUN mkdir -p /data
+
 COPY --from=build /app/.venv /app/.venv
 COPY microservice_nre/ ./microservice_nre/
 COPY migrations/ ./migrations/
