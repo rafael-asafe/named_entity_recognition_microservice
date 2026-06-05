@@ -13,9 +13,16 @@ Handlers disponíveis (ativados via settings):
 import logging
 import sys
 import time
+from pathlib import Path
 
 from microservice_nre.utils.context import REQUEST_ID
 from microservice_nre.utils.settings import settings
+
+
+def create_logfile() -> None:
+    """Garante que o arquivo de log exista e seja gravável."""
+    log_path = Path(settings.LOG_FILE)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
 
 def default_formatter() -> logging.Formatter:
@@ -59,6 +66,7 @@ class CustomLogger(logging.Logger):
 
         self.setLevel(settings.LOG_LEVEL)
         self.propagate = False
+        create_logfile()
 
         self.addHandler(CustomFileHandler())
         self.addHandler(CustomStreamHandler())
